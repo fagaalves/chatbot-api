@@ -1,40 +1,35 @@
-from flask import Flask, request, jsonify
 import os
+from flask import Flask, request, jsonify
 import openai
 
 app = Flask(__name__)
 
-# Load OpenAI API Key from Environment Variables
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Load OpenAI API key from environment variables
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-@app.route("/")
+@app.route('/')
 def home():
     return "Chatbot API is running!"
 
-@app.route("/chat", methods=["POST"])
+@app.route('/chat', methods=['POST'])
 def chat():
+    data = request.get_json()
+    user_message = data.get("message", "")
+
+    if not OPENAI_API_KEY:
+        return jsonify({"error": "API key not configured"}), 500
+
     try:
-        data = request.get_json()
-        user_message = data.get("message", "")
-
-        if not user_message:
-            return jsonify({"error": "Message is required"}), 400
-
-        # Send message to OpenAI ChatGPT
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": "You are a helpful relationship coach."},
-                      {"role": "user", "content": user_message}]
+            model="gpt-4",
+            messages=[{"role": "user", "content": user_message}],
+            api_key=OPENAI_API_KEY
         )
-
-        bot_reply = response["choices"][0]["message"]["content"]
-
-        return jsonify({"reply": bot_reply})
-
+        return jsonify({"response": response["choices"][0]["message"]["content"]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Set Port to 10000 (Render Requirement)
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Use Render's assigned port
-    app.run(host="0.0.0.0", port=port)
+# Explicitly set the correct port for Render
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))  # Ensure port is detected correctly
+    app.run(host='0.0.0.0', port=port, debug=True)
